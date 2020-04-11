@@ -1,15 +1,23 @@
 #ifndef MATRIX
 #define MATRIX
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 
-#define MATLAB_ENGINE
+//#define MATLAB_ENGINE
+
+#define EIGENLIBRARY
 
 #ifdef MATLAB_ENGINE
 #include "engine.h"
 #endif
 
+#ifdef EIGENLIBRARY
+#include "Eigen/Dense"
+#include "Eigen/Sparse"
+#include <vector>
+#endif
 
 // if Template is USED, then the implementation and the declaration should be palced in the SAME FILE !!!!
 template <typename Scalar> 
@@ -112,6 +120,7 @@ Matrix<Scalar> Matrix<Scalar>::operator/ (Matrix<Scalar> b_vec){
     mxDestroyArray(A_mlab);
     mxDestroyArray(b_mlab);
     mxDestroyArray(x_mlab);
+    engClose(ep);
     return result_x;
 }
 #endif
@@ -185,7 +194,56 @@ unsigned int Matrix<Scalar>::getColumnNum(){
 }
 
 
-//class SparseMatrix
+
+#ifdef EIGENLIBRARY
+/*
+    SparseMatrixEigen is based on OpenSource library "Eigen"
+*/
+class SparseMatrixEigen{
+private:
+    Eigen::SparseMatrix<double>* SpMat;
+    Eigen::SparseMatrix<double> SpMatrix;
+    int N; // number of non-zeros elements
+public:
+    //EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    SparseMatrixEigen(Eigen::SparseMatrix<double>* spmat){
+        SpMat = spmat;
+    }
+    // Large Symmetric Cases
+    // 两种方法展示了Eigen::SparseMatrix作为class member 不同的使用方式
+    void build(std::vector<Eigen::Triplet<double> >& coefficients);
+    Eigen::VectorXd solve_linear_sym(Eigen::VectorXd& b_vec, int* niter, double* err); 
+    // Especially for Non-symmetric Case
+    Eigen::VectorXd solve_linear_nonsym(Eigen::VectorXd& b_vec, int* niter, double* err);
+};
+
+void SparseMatrixEigen::build(std::vector<Eigen::Triplet<double> >& coefficients){
+    SpMatrix = Eigen::SparseMatrix<double>(4, 4);
+    SpMatrix.setFromTriplets(coefficients.begin(), coefficients.end());
+}
+
+Eigen::VectorXd SparseMatrixEigen::solve_linear_sym(Eigen::VectorXd& b_vec, int* niter, double* err){
+    Eigen::ConjugateGradient<Eigen::SparseMatrix<double>,  Eigen::Lower|Eigen::Upper, Eigen::DiagonalPreconditioner<double> > CG_SOLVER;
+    CG_SOLVER.setMaxIterations(1000);
+    CG_SOLVER.compute(SpMatrix);
+    Eigen::VectorXd X = CG_SOLVER.solve(b_vec);
+    (*niter) = CG_SOLVER.iterations();
+    (*err) = CG_SOLVER.error();
+    return X;
+}
+
+Eigen::VectorXd SparseMatrixEigen::solve_linear_nonsym(Eigen::VectorXd& b_vec, int* niter, double* err){
+    Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::DiagonalPreconditioner<double> >  BCGST_SOLVER;
+    BCGST_SOLVER.setMaxIterations(1000);
+    BCGST_SOLVER.compute(*SpMat);
+    Eigen::VectorXd X = BCGST_SOLVER.solve(b_vec);
+    (*niter) = BCGST_SOLVER.iterations();
+    (*err) = BCGST_SOLVER.error();
+    return X;
+}
+
+#endif
+
 
 
 
