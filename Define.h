@@ -12,4 +12,8 @@ extern double L;
 extern int Nz;
 extern double dz;
 
+extern double c0;
+extern double rho;
+extern double eta;
+
 #endif

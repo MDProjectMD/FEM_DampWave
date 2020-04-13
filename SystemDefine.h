@@ -22,6 +22,9 @@ public:
     double* t_array;        // discrete time points
     Eigen::VectorXd t_vector;
 
+    double* z_array;        // discrete spatial evaluated points, of length 2*Nz - 1
+    Eigen::VectorXd z_vector;
+
     double* vel_array;
     Eigen::VectorXd vel_vector;  // discrete variables to be solved
 
@@ -32,10 +35,10 @@ public:
     Eigen::VectorXd V1_vector;   // discrete time series for function V1(t)
 
     double* g_array;
-    Eigen::VectorXd g_vector;    // discrete spatial series for BC at t=0    g(z)    0th order
+    Eigen::VectorXd g_vector;    // discrete spatial series for BC at t=0    g(z)    0th order, of length 2*Nz - 1
 
     double* h_array;
-    Eigen::VectorXd h_vector;    // discrete spatial series for BC at t=0    h(z)    1st order
+    Eigen::VectorXd h_vector;    // discrete spatial series for BC at t=0    h(z)    1st order, of length 2*Nz - 1
 
     bool ifStore();
     unsigned int getSpatialNodesNumber();
@@ -56,6 +59,8 @@ public:
 
     void Finish();
 };
+
+double V0(double t);
 
 double V1(double t);
 

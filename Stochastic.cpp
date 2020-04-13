@@ -3,7 +3,7 @@
 
 void GenerateStochasticVelocitySeries(double** vel_array, double** t_array, int N, double dt, bool show_tag){
     (*vel_array) = (double*) calloc(N, sizeof(double));
-    if((*t_array) == NULL){
+    if(t_array != NULL){
         (*t_array) = (double*) calloc(N, sizeof(double));
     }
     double scalar = sqrt(T);
@@ -15,8 +15,10 @@ void GenerateStochasticVelocitySeries(double** vel_array, double** t_array, int 
     }
 
     for(int i=0; i<N; i++){
-        (*vel_array)[i] *= scalar;
-        (*t_array)[i] = i*dt;
+        (*vel_array)[i] = (*vel_array)[i] * scalar;
+        if(t_array != NULL){
+            (*t_array)[i] = i*dt;
+        }
     }
 
     if(show_tag){

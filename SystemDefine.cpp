@@ -5,6 +5,8 @@ LinearWestervelt::LinearWestervelt(){
     ZMAX = L;
     N_t = Nt;
     N_z = Nz;
+    A = c0*c0;
+    B = 2*eta/rho;
 }
 
 unsigned int LinearWestervelt::getSpatialNodesNumber(){
@@ -37,18 +39,26 @@ void LinearWestervelt::AllocateMemory(double** ptr, int N){
 
 void LinearWestervelt::BuildUp(){
     if(ifStoreSolution){
-        vel_matrix = Eigen::MatrixXd (N_z, N_z);    // transfer to rowMajor matrix
+        vel_matrix = Eigen::MatrixXd (N_t, 2*N_z - 1);    // transfer to rowMajor matrix
     }else{
-        vel_matrix = Eigen::MatrixXd (3, N_z);
+        vel_matrix = Eigen::MatrixXd (3, 2*N_z - 1);
     }
+
     AllocateMemory(&t_array, N_t);
     for(int i=0; i<N_t; i++){
         t_array[i] = i*dt;
     }
     t_vector = Eigen::Map<Eigen::VectorXd> (t_array, N_t); // must specify the size
-    AllocateMemory(&vel_array, N_z);
-    memcpy(vel_array, g_array, N_z*sizeof(double)); // velocity array at time step 0 is equal to BC Initial0 g(z)
-    vel_vector = Eigen::Map<Eigen::VectorXd> (vel_array, N_z);
+
+    AllocateMemory(&z_array, 2*N_z - 1);
+    for(int i=0; i<2*N_z - 1; i++){
+        z_array[i] = i*dz/2.;
+    }
+    z_vector = Eigen::Map<Eigen::VectorXd> (z_array, 2*N_z - 1); // must specify the size
+
+    AllocateMemory(&vel_array, 2*N_z - 1);
+    memcpy(vel_array, g_array, (2*N_z - 1)*sizeof(double)); // velocity array at time step 0 is equal to BC Initial0 g(z)
+    vel_vector = Eigen::Map<Eigen::VectorXd> (vel_array, 2*N_z - 1);
     // update vel_matrix information
     vel_matrix.row(0) = vel_vector;
 }
@@ -57,13 +67,14 @@ void LinearWestervelt::BuildUp(){
 
 void LinearWestervelt::SetDirichlet0(double(*func)(double t)){
     if(func == NULL){
-        GenerateStochasticVelocitySeries(&V0_array, &t_array, N_t, dt);
+        GenerateStochasticVelocitySeries(&V0_array, NULL, N_t, dt);
     }else{
         AllocateMemory(&V0_array, N_t);
         for(int i=0; i<N_t; i++){
             V0_array[i] = func(i*dt);
         }
     }
+    printf("%f\t%f\t%f\n", V0_array[0], V0_array[1], V0_array[2]);
     V0_vector = Eigen::Map<Eigen::VectorXd> (V0_array, N_t);
 }
 
@@ -81,19 +92,19 @@ void LinearWestervelt::SetDirichlet1(double(*func)(double t)){
 }
 
 void LinearWestervelt::SetInitial0(double(*func)(double z)){
-    AllocateMemory(&g_array, N_z);
-    for(int i=0; i<N_z; i++){
+    AllocateMemory(&g_array, 2*N_z - 1);
+    for(int i=0; i<2*N_z - 1; i++){
         g_array[i] = func(i*dz);
     }
-    g_vector = Eigen::Map<Eigen::VectorXd> (g_array, N_z);
+    g_vector = Eigen::Map<Eigen::VectorXd> (g_array, 2*N_z - 1);
 }
 
 void LinearWestervelt::SetInitial1(double(*func)(double z)){
-    AllocateMemory(&h_array, N_z);
-    for(int i=0; i<N_z; i++){
+    AllocateMemory(&h_array, 2*N_z - 1);
+    for(int i=0; i<2*N_z - 1; i++){
         h_array[i] = func(i*dz);
     }
-    h_vector = Eigen::Map<Eigen::VectorXd> (h_array, N_z);
+    h_vector = Eigen::Map<Eigen::VectorXd> (h_array, 2*N_z - 1);
 }
 
 void LinearWestervelt::Finish(){
@@ -103,11 +114,12 @@ void LinearWestervelt::Finish(){
 
 
 double V0(double t){
-    return 0.;
+    return sin(t);
 }
 
 double V1(double t){
     return 0.;
+    //return sin(t);
 }
 
 double g(double z){
